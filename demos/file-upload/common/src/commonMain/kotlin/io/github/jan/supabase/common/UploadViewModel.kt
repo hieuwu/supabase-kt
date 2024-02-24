@@ -1,7 +1,6 @@
 package io.github.jan.supabase.common
 
 import androidx.compose.ui.ExperimentalComposeUiApi
-import co.touchlab.kermit.Logger
 import io.github.jan.supabase.annotations.SupabaseInternal
 import io.github.jan.supabase.storage.UploadStatus
 import io.github.jan.supabase.storage.resumable.Fingerprint
@@ -10,6 +9,7 @@ import io.github.jan.supabase.storage.resumable.ResumableUpload
 import io.github.jan.supabase.collections.AtomicMutableMap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach

@@ -20,20 +20,20 @@ actual fun MPFilePicker(
     close: () -> Unit
 ) {
     val context = LocalContext.current
-    FilePicker(showFileDialog, fileExtension = "jpg") {
-        it?.let { uriString ->
-            val uri = Uri.parse(uriString)
+    FilePicker(showFileDialog, fileExtensions = listOf("jpg")) {
+        it?.let { mpFile ->
+            val uri = Uri.parse(mpFile.path)
             val returnCursor: Cursor = context.contentResolver.query(uri, null, null, null, null)!!
             val nameIndex = returnCursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
             returnCursor.moveToFirst()
             val name = returnCursor.getString(nameIndex)
             returnCursor.close()
-            val fileDescriptor: AssetFileDescriptor = context.contentResolver.openAssetFileDescriptor(uri, "r") ?: error("Could not open file descriptor")
+            val fileDescriptor: AssetFileDescriptor = context.contentResolver.openAssetFileDescriptor(uri, "r") ?: error("Could not open mpFile descriptor")
             val size = fileDescriptor.length
             onFileSelected(
                 MPFile(
                     name = name,
-                    source = uriString,
+                    source = mpFile.path,
                     size = size,
                     dataProducer = {
                         (context.contentResolver.openInputStream(uri)?.toByteReadChannel() ?: error("Could not open input stream")).apply { discard(it) }

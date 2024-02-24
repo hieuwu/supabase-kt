@@ -1,7 +1,7 @@
 [versions]
-kotlin = "1.8.20"
+kotlin = "1.9.22"
 agp = "8.0.2"
-compose = "1.4.0"
+compose = "1.5.12"
 supabase = "1.1.0"
 koin = "3.4.1"
 ktor = "2.3.1"
@@ -11,7 +11,7 @@ androidx-compat = "1.6.1"
 androidx-lifecycle = "2.6.1"
 androidx-activity = "1.7.2"
 
-file-picker = "1.0.0"
+file-picker = "3.0.0"
 
 [plugins]
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
@@ -35,7 +35,7 @@ androidx-compat = { module = "androidx.appcompat:appcompat", version.ref = "andr
 androidx-lifecycle-viewmodel-ktx = { module = "androidx.lifecycle:lifecycle-viewmodel-ktx", version.ref = "androidx-lifecycle" }
 androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "androidx-lifecycle" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activity" }
-
+ktor-ios = { module = "io.ktor:ktor-client-ios", version.ref = "ktor" }
 ktor-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }
 
 filepicker = { module = "com.darkrockstudios:mpfilepicker", version.ref = "file-picker" }

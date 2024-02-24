@@ -11,9 +11,9 @@ actual fun MPFilePicker(
     onFileSelected: (MPFile) -> Unit,
     close: () -> Unit
 ) {
-    FilePicker(showFileDialog, fileExtension = "jpg") {
-        it?.let { path ->
-            onFileSelected(MPFile(Paths.get(path)))
+    FilePicker(showFileDialog, fileExtensions = listOf("jpg")) {
+        it?.let { mpFile ->
+            onFileSelected(MPFile(Paths.get(mpFile.path)))
         }
         close()
     }
