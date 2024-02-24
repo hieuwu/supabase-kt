@@ -11,4 +11,4 @@ pluginManagement {
 
 rootProject.name = "file-upload"
 
-include(":android", ":desktop", ":common")
+include(":android", ":desktop", ":common", ":ios")

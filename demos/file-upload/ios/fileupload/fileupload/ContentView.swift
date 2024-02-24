@@ -7,15 +7,15 @@
 
 import SwiftUI
 
-struct ContentView: View {
-    var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
-        }
-        .padding()
+struct ContentView: UIViewControllerRepresentable {
+
+    let viewModel: UploadViewModel = RootComponent().getViewModel()
+
+    func makeUIViewController(context: Context) -> UIViewController {
+        return AppKt.AppIos(viewModel: viewModel)
+    }
+
+    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
     }
 }
 

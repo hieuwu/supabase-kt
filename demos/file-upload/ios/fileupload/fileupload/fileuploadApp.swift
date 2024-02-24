@@ -6,9 +6,14 @@
 //
 
 import SwiftUI
+import common
 
 @main
 struct fileuploadApp: App {
+    init() {
+        KoinKt.doInitKoin(additionalConfiguration: {_ in})
+    }
+
     var body: some Scene {
         WindowGroup {
             ContentView()
