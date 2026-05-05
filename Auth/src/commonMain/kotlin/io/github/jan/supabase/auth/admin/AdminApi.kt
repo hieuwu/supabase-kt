@@ -4,10 +4,11 @@ import io.github.jan.supabase.annotations.SupabaseInternal
 import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.auth.SignOutScope
 import io.github.jan.supabase.auth.admin.custom.provider.CustomProvidersApi
-import io.github.jan.supabase.auth.api.AuthenticatedSupabaseApi
-import io.github.jan.supabase.auth.user.UserInfo
+import io.github.jan.supabase.auth.admin.custom.provider.CustomProvidersApiImpl
 import io.github.jan.supabase.auth.admin.oauth.OAuthClientApi
 import io.github.jan.supabase.auth.admin.oauth.OAuthClientApiImpl
+import io.github.jan.supabase.auth.api.AuthenticatedSupabaseApi
+import io.github.jan.supabase.auth.user.UserInfo
 import io.github.jan.supabase.auth.user.UserMfaFactor
 import io.github.jan.supabase.putJsonObject
 import io.github.jan.supabase.safeBody
@@ -27,6 +28,9 @@ import kotlinx.serialization.json.put
  */
 interface AdminApi {
 
+    /**
+     * Contains all custom OIDC/OAuth provider administration methods
+     */
     val customProviders: CustomProvidersApi
 
     /**
@@ -111,6 +115,7 @@ interface AdminApi {
 internal class AdminApiImpl(val api: AuthenticatedSupabaseApi) : AdminApi {
 
     override val oauth: OAuthClientApi = OAuthClientApiImpl(api)
+    override val customProviders: CustomProvidersApi = CustomProvidersApiImpl(api.resolve("admin/custom-providers"))
 
     override suspend fun signOut(jwt: String, scope: SignOutScope) {
         api.post("logout") {
