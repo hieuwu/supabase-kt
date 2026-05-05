@@ -8,38 +8,137 @@ import kotlinx.serialization.json.JsonObject
  * Parameters for creating a new custom provider.
  */
 @Serializable
-data class CustomProviderBuilder(
+class CustomProviderBuilder {
+
+    // required:
+
+    /**
+     * Provider type
+     */
     @SerialName("provider_type")
-    var providerType: CustomProviderType,
-    var identifier: String,
-    var name: String,
+    var providerType: CustomProviderType? = null
+
+    /**
+     * Provider identifier (e.g. `custom:mycompany`)
+     */
+    var identifier: String? = null
+
+    /**
+     * Human-readable name
+     */
+    var name: String? = null
+
+    /**
+     * OAuth client ID
+     */
     @SerialName("client_id")
-    var clientId: String,
+    var clientId: String? = null
+
+    /**
+     * OAuth client secret (write-only, not returned in responses)
+     */
     @SerialName("client_secret")
-    var clientSecret: String,
+    var clientSecret: String? = null
+
+    // optional:
+
+    /**
+     * Additional client IDs accepted during token validation
+     */
     @SerialName("acceptable_client_ids")
-    var acceptableClientIds: List<String>? = null,
-    var scopes: List<String>? = null,
+    var acceptableClientIds: List<String>? = null
+
+    /**
+     * OAuth scopes requested during authorization
+     */
+    var scopes: List<String>? = null
+
+    /**
+     * Whether PKCE is enabled
+     */
     @SerialName("pkce_enabled")
-    var pkceEnabled: Boolean? = null,
+    var pkceEnabled: Boolean? = null
+
+    /**
+     * Mapping of provider attributes to Supabase user attributes
+     */
     @SerialName("attribute_mapping")
-    var attributeMapping: JsonObject? = null,
+    var attributeMapping: JsonObject? = null
+
+    /**
+     * Additional parameters sent with the authorization request
+     */
     @SerialName("authorization_params")
-    var authorizationParams: JsonObject? = null,
-    var enabled: Boolean? = null,
+    var authorizationParams: JsonObject? = null
+
+    /**
+     * Whether the provider is enabled
+     */
+    var enabled: Boolean? = null
+
+    /**
+     * Whether email is optional for this provider
+     */
     @SerialName("email_optional")
-    var emailOptional: Boolean? = null,
-    var issuer: String? = null,
+    var emailOptional: Boolean? = null
+
+    /**
+     * OIDC issuer URL
+     */
+    var issuer: String? = null
+
+    /**
+     * OIDC discovery URL
+     */
     @SerialName("discovery_url")
-    var discoveryUrl: String? = null,
+    var discoveryUrl: String? = null
+
+    /**
+     * Whether to skip nonce check (OIDC)
+     */
     @SerialName("skip_nonce_check")
-    var skipNonceCheck: Boolean? = null,
+    var skipNonceCheck: Boolean? = null
+
+    /**
+     * OAuth2 authorization URL
+     */
     @SerialName("authorization_url")
-    var authorizationUrl: String? = null,
+    var authorizationUrl: String? = null
+
+    /**
+     * OAuth2 token URL
+     */
     @SerialName("token_url")
-    var tokenUrl: String? = null,
+    var tokenUrl: String? = null
+
+    /**
+     * OAuth2 userinfo URL
+     */
     @SerialName("userinfo_url")
-    var userinfoUrl: String? = null,
+    var userinfoUrl: String? = null
+
+    /**
+     * JWKS URI for token verification
+     */
     @SerialName("jwks_uri")
     var jwksUri: String? = null
-)
+
+    internal fun checkRequired() {
+        requireNotNull(providerType) {
+            "Provider type must be set"
+        }
+        requireNotNull(identifier) {
+            "Identifier must be set"
+        }
+        requireNotNull(name) {
+            "Name must be set"
+        }
+        requireNotNull(clientId) {
+            "Client id must be set"
+        }
+        requireNotNull(clientSecret) {
+            "Client secret must be set"
+        }
+    }
+
+}
