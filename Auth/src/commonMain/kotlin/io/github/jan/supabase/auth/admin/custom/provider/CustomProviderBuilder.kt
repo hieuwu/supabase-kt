@@ -139,6 +139,25 @@ class CustomProviderBuilder {
         requireNotNull(clientSecret) {
             "Client secret must be set"
         }
+        when(providerType) {
+            CustomProviderType.OAUTH2 -> {
+                requireNotNull(authorizationUrl) {
+                    "Authorization url must be set"
+                }
+                requireNotNull(tokenUrl) {
+                    "Token url must be set"
+                }
+                requireNotNull(userinfoUrl) {
+                    "userInfoUrl must be set"
+                }
+            }
+            CustomProviderType.OIDC -> {
+                requireNotNull(issuer) {
+                    "issuer must be set"
+                }
+            }
+            null -> TODO()
+        }
     }
 
 }

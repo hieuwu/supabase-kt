@@ -82,7 +82,7 @@ internal class CustomProvidersApiImpl(
     override suspend fun createProvider(builder: CustomProviderBuilder.() -> Unit): CustomOAuthProvider {
         val builder = CustomProviderBuilder().apply(builder)
         builder.checkRequired()
-        return api.post("", builder).safeBody()
+        return api.postJson("", builder).safeBody()
     }
 
     override suspend fun getProvider(identifier: String): CustomOAuthProvider {
@@ -94,7 +94,7 @@ internal class CustomProvidersApiImpl(
         builder: CustomProviderUpdateBuilder.() -> Unit
     ): CustomOAuthProvider {
         val builder = CustomProviderUpdateBuilder().apply(builder)
-        return api.put(identifier, builder).safeBody()
+        return api.putJson(identifier, builder).safeBody()
     }
 
     override suspend fun deleteProvider(identifier: String) {
