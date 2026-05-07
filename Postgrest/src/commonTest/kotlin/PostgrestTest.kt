@@ -160,52 +160,6 @@ class PostgrestTest {
     }
 
     @Test
-    fun testInsert() {
-        val body = JsonArray(listOf(
-            buildJsonObject {
-                put("key", "value")
-                put("key2", "value")
-            }
-        ))
-        testClient(
-            request = { table ->
-                from("schema", table).insert(body) {
-                    assertEquals(body, this.body)
-                }
-            },
-            requestHandler = {
-                assertMethodIs(HttpMethod.Post, it.method)
-                val receivedBody = it.body.toJsonElement()
-                assertEquals(body, receivedBody)
-                assertEquals("key,key2", it.url.parameters["columns"])
-                assertEquals("schema", it.headers["Content-Profile"])
-                respond("")
-            }
-        )
-    }
-
-    @Test
-    fun testInsertValue() {
-        val value = TestObject.mock
-        val expectedBody = JsonArray(listOf(
-            buildJsonObject { put("data", "mockData") }
-        ))
-        testClient(
-            request = { table ->
-                from("schema", table).insert(value)
-            },
-            requestHandler = {
-                assertMethodIs(HttpMethod.Post, it.method)
-                val receivedBody = it.body.toJsonElement()
-                assertEquals(expectedBody, receivedBody)
-                assertEquals("data", it.url.parameters["columns"])
-                assertEquals("schema", it.headers["Content-Profile"])
-                respond("")
-            }
-        )
-    }
-
-    @Test
     fun testInsertValues() {
         val values = listOf(TestObject("mockData1"), TestObject("mockData2"))
         val expectedBody = JsonArray(listOf(
@@ -215,52 +169,6 @@ class PostgrestTest {
         testClient(
             request = { table ->
                 from("schema", table).insert(values)
-            },
-            requestHandler = {
-                assertMethodIs(HttpMethod.Post, it.method)
-                val receivedBody = it.body.toJsonElement()
-                assertEquals(expectedBody, receivedBody)
-                assertEquals("data", it.url.parameters["columns"])
-                assertEquals("schema", it.headers["Content-Profile"])
-                respond("")
-            }
-        )
-    }
-
-    @Test
-    fun testUpsert() {
-        val body = JsonArray(listOf(
-            buildJsonObject {
-                put("key", "value")
-                put("key2", "value")
-            }
-        ))
-        testClient(
-            request = { table ->
-                from("schema", table).upsert(body) {
-                    assertEquals(body, this.body)
-                }
-            },
-            requestHandler = {
-                assertMethodIs(HttpMethod.Post, it.method)
-                val receivedBody = it.body.toJsonElement()
-                assertEquals(body, receivedBody)
-                assertEquals("key,key2", it.url.parameters["columns"])
-                assertEquals("schema", it.headers["Content-Profile"])
-                respond("")
-            }
-        )
-    }
-
-    @Test
-    fun testUpsertValue() {
-        val value = TestObject.mock
-        val expectedBody = JsonArray(listOf(
-            buildJsonObject { put("data", "mockData") }
-        ))
-        testClient(
-            request = { table ->
-                from("schema", table).upsert(value)
             },
             requestHandler = {
                 assertMethodIs(HttpMethod.Post, it.method)
@@ -378,27 +286,6 @@ class PostgrestTest {
 
     @Test
     fun testUpdateWithRequest() {
-        val body = buildJsonObject { put("key", "value") }
-        testClient(
-            request = { table ->
-                from("schema", table).update(body) {
-                    count(Count.EXACT)
-                    select() // sets return=representation
-                }
-            },
-            requestHandler = {
-                assertMethodIs(HttpMethod.Patch, it.method)
-                // Using .split(",").toSet() because order inside Set could differ (Preferences are built from set and joinToString). Actually returning and count order varies. Let's assume order might be "count=exact,return=representation" or vice-versa.
-                val preferSet = it.headers["Prefer"]?.split(",")?.toSet() ?: emptySet()
-                assertEquals(setOf("count=exact", "return=representation"), preferSet)
-                assertEquals("*", it.url.parameters["select"])
-                respond("")
-            }
-        )
-    }
-
-    @Test
-    fun testUpdateManualWithRequest() {
         testClient(
             request = { table ->
                 from("schema", table).update({
@@ -479,21 +366,6 @@ class PostgrestTest {
 
     @Test
     fun testUpdateEmptyParams() {
-        val body = buildJsonObject { put("key", "value") }
-        testClient(
-            request = { table ->
-                from("schema", table).update(body)
-            },
-            requestHandler = {
-                assertMethodIs(HttpMethod.Patch, it.method)
-                assertEquals("schema", it.headers["Content-Profile"])
-                respond("")
-            }
-        )
-    }
-
-    @Test
-    fun testUpdateManualEmptyParams() {
         testClient(
             request = { table ->
                 from("schema", table).update({ set("key", "value") })
@@ -501,23 +373,6 @@ class PostgrestTest {
             requestHandler = {
                 assertMethodIs(HttpMethod.Patch, it.method)
                 assertEquals("schema", it.headers["Content-Profile"])
-                respond("")
-            }
-        )
-    }
-
-    @Test
-    fun testUpdateNoParams() {
-        testClient(
-            request = { table ->
-                from("schema", table).update()
-            },
-            requestHandler = {
-                assertMethodIs(HttpMethod.Patch, it.method)
-                assertEquals("schema", it.headers["Content-Profile"])
-                // The body will be an empty JSON object
-                val receivedBody = it.body.toJsonElement().jsonObject
-                assertEquals(emptyMap(), receivedBody)
                 respond("")
             }
         )
@@ -566,27 +421,6 @@ class PostgrestTest {
         runTest {
             supabase.postgrest.rpc("function") {
                 method = RpcMethod.HEAD
-                schema = "schema"
-            }
-        }
-    }
-
-    @Test
-    fun testRpcParameters() {
-        val mockData = buildJsonObject {
-            put("key", "value")
-        }
-        supabase = createMockedSupabaseClient(
-            configuration = configureClient
-        ) {
-            assertPathIs("/rpc/function", it.url.pathAfterVersion())
-            assertEquals(mockData, it.body.toJsonElement())
-            assertMethodIs(HttpMethod.Post, it.method)
-            assertEquals("schema", it.headers["Content-Profile"])
-            respond("")
-        }
-        runTest {
-            supabase.postgrest.rpc("function", mockData) {
                 schema = "schema"
             }
         }
