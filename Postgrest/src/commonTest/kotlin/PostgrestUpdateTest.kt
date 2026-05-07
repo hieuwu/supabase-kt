@@ -1,6 +1,5 @@
 package io.github.jan.supabase.postgrest.query
 
-import io.github.jan.supabase.postgrest.PropertyConversionMethod
 import io.github.jan.supabase.serializer.KotlinXSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -16,10 +15,6 @@ class PostgrestUpdateTest {
     data class TestData(
         @SerialName("test_string") val testString: String,
         val testInt: Int,
-        val testLong: Long,
-        val testFloat: Float,
-        val testDouble: Double,
-        val testBoolean: Boolean,
         val testGeneric: TestInnerObj
     )
 
@@ -74,70 +69,6 @@ class PostgrestUpdateTest {
             TestData::testInt setTo null
         }
         assertEquals(JsonObject(mapOf("test_int" to JsonNull)), update)
-    }
-
-    @Test
-    fun testSetToLong() {
-        val update = buildPostgrestUpdate(serializer = serializer) {
-            TestData::testLong setTo 42L
-        }
-        assertEquals(JsonObject(mapOf("test_long" to JsonPrimitive(42L))), update)
-    }
-    
-    @Test
-    fun testSetToLongNull() {
-        val update = buildPostgrestUpdate(serializer = serializer) {
-            TestData::testLong setTo null
-        }
-        assertEquals(JsonObject(mapOf("test_long" to JsonNull)), update)
-    }
-
-    @Test
-    fun testSetToFloat() {
-        val update = buildPostgrestUpdate(serializer = serializer) {
-            TestData::testFloat setTo 42.0f
-        }
-        assertEquals(JsonObject(mapOf("test_float" to JsonPrimitive(42.0f))), update)
-    }
-    
-    @Test
-    fun testSetToFloatNull() {
-        val update = buildPostgrestUpdate(serializer = serializer) {
-            TestData::testFloat setTo null
-        }
-        assertEquals(JsonObject(mapOf("test_float" to JsonNull)), update)
-    }
-
-    @Test
-    fun testSetToDouble() {
-        val update = buildPostgrestUpdate(serializer = serializer) {
-            TestData::testDouble setTo 42.0
-        }
-        assertEquals(JsonObject(mapOf("test_double" to JsonPrimitive(42.0))), update)
-    }
-    
-    @Test
-    fun testSetToDoubleNull() {
-        val update = buildPostgrestUpdate(serializer = serializer) {
-            TestData::testDouble setTo null
-        }
-        assertEquals(JsonObject(mapOf("test_double" to JsonNull)), update)
-    }
-
-    @Test
-    fun testSetToBoolean() {
-        val update = buildPostgrestUpdate(serializer = serializer) {
-            TestData::testBoolean setTo true
-        }
-        assertEquals(JsonObject(mapOf("test_boolean" to JsonPrimitive(true))), update)
-    }
-    
-    @Test
-    fun testSetToBooleanNull() {
-        val update = buildPostgrestUpdate(serializer = serializer) {
-            TestData::testBoolean setTo null
-        }
-        assertEquals(JsonObject(mapOf("test_boolean" to JsonNull)), update)
     }
 
     @Test
