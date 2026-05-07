@@ -132,6 +132,7 @@ interface Realtime : MainPlugin<Realtime.Config>, CustomSerializationPlugin {
      * @property maxAttempts The maximum amount of connection attempts before giving up. Defaults to 5
      * @property disconnectOnEmptyChannelsAfter Delay before disconnecting from the realtime socket after the last channel was removed. If null, it defaults to `2*heartbeatInterval`
      */
+    @Suppress("MagicNumber")
     class Config: MainConfig(), CustomSerializationConfig, AuthDependentPluginConfig {
 
         var websocketConfig: WebSockets.Config.() -> Unit = {}
