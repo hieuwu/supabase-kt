@@ -3,6 +3,7 @@ package io.github.jan.supabase.auth.admin.custom.provider
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
+import kotlin.time.Instant
 
 /**
  * @param id Unique identifier (UUID)
@@ -65,7 +66,7 @@ data class CustomOAuthProvider(
     @SerialName("discovery_document")
     val discoveryDocument: OIDCDiscoveryDocument? = null,
     @SerialName("created_at")
-    val createdAt: String,
+    val createdAt: Instant,
     @SerialName("updated_at")
-    val updatedAt: String
+    val updatedAt: Instant
 )
