@@ -10,8 +10,6 @@ import kotlinx.serialization.json.JsonObject
 @Serializable
 class CustomProviderBuilder {
 
-    // required:
-
     /**
      * Provider type
      */
@@ -39,8 +37,6 @@ class CustomProviderBuilder {
      */
     @SerialName("client_secret")
     var clientSecret: String? = null
-
-    // optional:
 
     /**
      * Additional client IDs accepted during token validation
@@ -124,9 +120,6 @@ class CustomProviderBuilder {
     var jwksUri: String? = null
 
     internal fun checkRequired() {
-        requireNotNull(providerType) {
-            "Provider type must be set"
-        }
         requireNotNull(identifier) {
             "Identifier must be set"
         }
@@ -139,7 +132,9 @@ class CustomProviderBuilder {
         requireNotNull(clientSecret) {
             "Client secret must be set"
         }
-        when(providerType) {
+        when(requireNotNull(providerType) {
+            "Provider type must be set"
+        }) {
             CustomProviderType.OAUTH2 -> {
                 requireNotNull(authorizationUrl) {
                     "Authorization url must be set"
@@ -156,7 +151,6 @@ class CustomProviderBuilder {
                     "issuer must be set"
                 }
             }
-            null -> TODO()
         }
     }
 
