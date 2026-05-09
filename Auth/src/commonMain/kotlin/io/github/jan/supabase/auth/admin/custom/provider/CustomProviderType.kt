@@ -8,6 +8,13 @@ import kotlinx.serialization.Serializable
  */
 @Serializable
 enum class CustomProviderType {
+    /**
+     * OAuth2 custom provider type
+     */
     @SerialName("oauth2") OAUTH2,
+
+    /**
+     * OIDC custom provider type
+     */
     @SerialName("oidc") OIDC
 }

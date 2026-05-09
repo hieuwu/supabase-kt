@@ -7,6 +7,23 @@ import kotlinx.serialization.json.JsonObject
 /**
  * Parameters for updating an existing custom provider.
  * All fields are optional. Only provided fields will be updated.
+ * @param name Human-readable name
+ * @param clientId OAuth client ID
+ * @param clientSecret OAuth client secret (write-only, not returned in responses)
+ * @param acceptableClientIds Additional client IDs accepted during token validation
+ * @param scopes OAuth scopes requested during authorization
+ * @param pkceEnabled Whether PKCE is enabled
+ * @param attributeMapping Mapping of provider attributes to Supabase user attributes
+ * @param authorizationParams Additional parameters sent with the authorization request
+ * @param enabled Whether the provider is enabled
+ * @param emailOptional Whether email is optional for this provider
+ * @param issuer OIDC issuer URL
+ * @param discoveryUrl OIDC discovery URL
+ * @param skipNonceCheck Whether to skip nonce check (OIDC)
+ * @param authorizationUrl OAuth2 authorization URL
+ * @param tokenUrl OAuth2 token URL
+ * @param userinfoUrl OAuth2 userinfo URL
+ * @param jwksUri JWKS URI for token verification
  */
 @Serializable
 data class CustomProviderUpdateBuilder(
