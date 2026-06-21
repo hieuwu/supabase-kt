@@ -22,6 +22,10 @@ import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.auth.providers.builtin.IDToken
 import io.github.jan.supabase.auth.providers.builtin.Phone
 import io.github.jan.supabase.auth.providers.builtin.SSO
+import io.github.jan.supabase.auth.otp.OtpApi
+import io.github.jan.supabase.auth.identities.IdentitiesApi
+import io.github.jan.supabase.auth.passwords.PasswordsApi
+import io.github.jan.supabase.auth.sso.SsoApi
 import io.github.jan.supabase.auth.status.SessionSource
 import io.github.jan.supabase.auth.status.SessionStatus
 import io.github.jan.supabase.auth.user.UserInfo
@@ -88,6 +92,26 @@ interface Auth : MainPlugin<AuthConfig>, CustomSerializationPlugin {
      * Access to the mfa api where you can manage multi-factor authentication for the current user.
      */
     val mfa: MfaApi
+
+    /**
+     * Access to the OTP related authentication operations.
+     */
+    val otp: OtpApi
+
+    /**
+     * Access to the identity related authentication operations.
+     */
+    val identities: IdentitiesApi
+
+    /**
+     * Access to the password related authentication operations.
+     */
+    val passwords: PasswordsApi
+
+    /**
+     * Access to the SSO related authentication operations.
+     */
+    val sso: SsoApi
 
     /**
      * The cache for the code verifier. This is used for PKCE authentication. Can be customized via [AuthConfig.codeVerifierCache]
@@ -176,7 +200,7 @@ interface Auth : MainPlugin<AuthConfig>, CustomSerializationPlugin {
      *
      * Example:
      * ```kotlin
-     * val url = supabase.auth.linkIdentity(Google)
+     * val url = supabase.auth.identities.linkIdentity(Google)
      * // Open the url in the browser, but this will happen automatically if [ExternalAuthConfigDefaults.automaticallyOpenUrl] is true (which it is by default)
      * ```
      *
@@ -189,18 +213,19 @@ interface Auth : MainPlugin<AuthConfig>, CustomSerializationPlugin {
      * @throws HttpRequestTimeoutException if the request timed out
      * @throws HttpRequestException on network related issues
      */
+    @Deprecated("Use identities.linkIdentity instead", ReplaceWith("identities.linkIdentity(provider, redirectUrl, config)"))
     suspend fun linkIdentity(
         provider: OAuthProvider,
         redirectUrl: String? = defaultRedirectUrl(),
         config: ExternalAuthConfigDefaults.() -> Unit = {}
-    ): String?
+    ): String? = identities.linkIdentity(provider, redirectUrl, config)
 
     /**
      * Links an identity to the current user using an ID token.
      *
      * Example:
      * ```kotlin
-     * supabase.auth.linkIdentityWithIdToken(provider = Google, idToken = "idToken") {
+     * supabase.auth.identities.linkIdentityWithIdToken(provider = Google, idToken = "idToken") {
      *     // Optional nonce
      *     nonce = "nonce"
      * }
@@ -213,11 +238,12 @@ interface Auth : MainPlugin<AuthConfig>, CustomSerializationPlugin {
      * @throws HttpRequestTimeoutException if the request timed out
      * @throws HttpRequestException on network related issues
      */
+    @Deprecated("Use identities.linkIdentityWithIdToken instead", ReplaceWith("identities.linkIdentityWithIdToken(provider, idToken, config)"))
     suspend fun linkIdentityWithIdToken(
         provider: IDTokenProvider,
         idToken: String,
         config: (IDToken.Config).() -> Unit = {}
-    )
+    ) = identities.linkIdentityWithIdToken(provider, idToken, config)
 
     /**
      * Unlinks an OAuth Identity from an existing user.
@@ -227,10 +253,11 @@ interface Auth : MainPlugin<AuthConfig>, CustomSerializationPlugin {
      * @throws HttpRequestTimeoutException if the request timed out
      * @throws HttpRequestException on network related issues
      */
+    @Deprecated("Use identities.unlinkIdentity instead", ReplaceWith("identities.unlinkIdentity(identityId, updateLocalUser)"))
     suspend fun unlinkIdentity(
         identityId: String,
         updateLocalUser: Boolean = true
-    )
+    ) = identities.unlinkIdentity(identityId, updateLocalUser)
 
     /**
      * Retrieves the sso url for the given [config]
@@ -240,7 +267,8 @@ interface Auth : MainPlugin<AuthConfig>, CustomSerializationPlugin {
      * @throws HttpRequestTimeoutException if the request timed out
      * @throws HttpRequestException on network related issues
      */
-    suspend fun retrieveSSOUrl(redirectUrl: String? = defaultRedirectUrl(), config: SSO.Config.() -> Unit): SSO.Result
+    @Deprecated("Use sso.retrieveSSOUrl instead", ReplaceWith("sso.retrieveSSOUrl(redirectUrl, config)"))
+    suspend fun retrieveSSOUrl(redirectUrl: String? = defaultRedirectUrl(), config: SSO.Config.() -> Unit): SSO.Result = sso.retrieveSSOUrl(redirectUrl, config)
 
     /**
      * Modifies the current user
@@ -266,7 +294,8 @@ interface Auth : MainPlugin<AuthConfig>, CustomSerializationPlugin {
      * @throws HttpRequestTimeoutException if the request timed out
      * @throws HttpRequestException on network related issues
      */
-    suspend fun resendEmail(type: OtpType.Email, email: String, captchaToken: String? = null, redirectUrl: String? = defaultRedirectUrl())
+    @Deprecated("Use otp.resendEmail instead", ReplaceWith("otp.resendEmail(type, email, captchaToken, redirectUrl)"))
+    suspend fun resendEmail(type: OtpType.Email, email: String, captchaToken: String? = null, redirectUrl: String? = defaultRedirectUrl()) = otp.resendEmail(type, email, captchaToken, redirectUrl)
 
     /**
      * Resends an existing SMS OTP or phone change OTP.
@@ -277,7 +306,8 @@ interface Auth : MainPlugin<AuthConfig>, CustomSerializationPlugin {
      * @throws HttpRequestTimeoutException if the request timed out
      * @throws HttpRequestException on network related issues
      */
-    suspend fun resendPhone(type: OtpType.Phone, phone: String, captchaToken: String? = null)
+    @Deprecated("Use otp.resendPhone instead", ReplaceWith("otp.resendPhone(type, phone, captchaToken)"))
+    suspend fun resendPhone(type: OtpType.Phone, phone: String, captchaToken: String? = null) = otp.resendPhone(type, phone, captchaToken)
 
     /**
      * Sends a password reset email to the user with the specified [email]
@@ -287,7 +317,8 @@ interface Auth : MainPlugin<AuthConfig>, CustomSerializationPlugin {
      * @throws HttpRequestTimeoutException if the request timed out
      * @throws HttpRequestException on network related issues
      */
-    suspend fun resetPasswordForEmail(email: String, redirectUrl: String? = defaultRedirectUrl(), captchaToken: String? = null)
+    @Deprecated("Use passwords.resetPasswordForEmail instead", ReplaceWith("passwords.resetPasswordForEmail(email, redirectUrl, captchaToken)"))
+    suspend fun resetPasswordForEmail(email: String, redirectUrl: String? = defaultRedirectUrl(), captchaToken: String? = null) = passwords.resetPasswordForEmail(email, redirectUrl, captchaToken)
 
     /**
      * Sends a nonce to the user's email (preferred) or phone
@@ -311,7 +342,8 @@ interface Auth : MainPlugin<AuthConfig>, CustomSerializationPlugin {
      * @see OtpVerifyResult.VerifiedNoSession
      * @see OtpVerifyResult.Authenticated
      */
-    suspend fun verifyEmailOtp(type: OtpType.Email, email: String, token: String, captchaToken: String? = null): OtpVerifyResult
+    @Deprecated("Use otp.verifyEmailOtp instead", ReplaceWith("otp.verifyEmailOtp(type, email, token, captchaToken)"))
+    suspend fun verifyEmailOtp(type: OtpType.Email, email: String, token: String, captchaToken: String? = null): OtpVerifyResult = otp.verifyEmailOtp(type, email, token, captchaToken)
 
     /**
      * Verifies an email otp token hash received via email
@@ -326,7 +358,8 @@ interface Auth : MainPlugin<AuthConfig>, CustomSerializationPlugin {
      * @see OtpVerifyResult.VerifiedNoSession
      * @see OtpVerifyResult.Authenticated
      */
-    suspend fun verifyEmailOtp(type: OtpType.Email, tokenHash: String, captchaToken: String? = null): OtpVerifyResult
+    @Deprecated("Use otp.verifyEmailOtp instead", ReplaceWith("otp.verifyEmailOtp(type, tokenHash, captchaToken)"))
+    suspend fun verifyEmailOtp(type: OtpType.Email, tokenHash: String, captchaToken: String? = null): OtpVerifyResult = otp.verifyEmailOtp(type, tokenHash, captchaToken)
 
     /**
      * Verifies a phone/sms otp
@@ -337,7 +370,8 @@ interface Auth : MainPlugin<AuthConfig>, CustomSerializationPlugin {
      * @throws HttpRequestTimeoutException if the request timed out
      * @throws HttpRequestException on network related issues
      */
-    suspend fun verifyPhoneOtp(type: OtpType.Phone, phone: String, token: String, captchaToken: String? = null)
+    @Deprecated("Use otp.verifyPhoneOtp instead", ReplaceWith("otp.verifyPhoneOtp(type, phone, token, captchaToken)"))
+    suspend fun verifyPhoneOtp(type: OtpType.Phone, phone: String, token: String, captchaToken: String? = null) = otp.verifyPhoneOtp(type, phone, token, captchaToken)
 
     /**
      * Retrieves the user attached to the specified [jwt]

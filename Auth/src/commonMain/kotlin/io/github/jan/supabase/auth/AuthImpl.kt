@@ -1,11 +1,6 @@
 @file:Suppress("LargeClass")
 package io.github.jan.supabase.auth
 
-import dev.whyoleg.cryptography.CryptographyProvider
-import dev.whyoleg.cryptography.algorithms.EC
-import dev.whyoleg.cryptography.algorithms.ECDSA
-import dev.whyoleg.cryptography.algorithms.RSA
-import dev.whyoleg.cryptography.algorithms.SHA256
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.annotations.SupabaseExperimental
 import io.github.jan.supabase.annotations.SupabaseInternal
@@ -16,26 +11,17 @@ import io.github.jan.supabase.auth.event.AuthEvent
 import io.github.jan.supabase.auth.exception.AuthRestException
 import io.github.jan.supabase.auth.exception.AuthSessionMissingException
 import io.github.jan.supabase.auth.exception.AuthWeakPasswordException
-import io.github.jan.supabase.auth.exception.InvalidJwtException
-import io.github.jan.supabase.auth.exception.TokenExpiredException
+import io.github.jan.supabase.auth.identities.IdentitiesApi
 import io.github.jan.supabase.auth.jwt.ClaimsRequestBuilder
 import io.github.jan.supabase.auth.jwt.ClaimsResponse
-import io.github.jan.supabase.auth.jwt.JWK
-import io.github.jan.supabase.auth.jwt.JWTUtils
-import io.github.jan.supabase.auth.jwt.JwkCacheEntry
-import io.github.jan.supabase.auth.jwt.JwtHeader
-import io.github.jan.supabase.auth.jwt.ecJwkToDer
-import io.github.jan.supabase.auth.jwt.ecdsaRawToDer
-import io.github.jan.supabase.auth.jwt.rsaJwkToDer
 import io.github.jan.supabase.auth.mfa.MfaApi
 import io.github.jan.supabase.auth.mfa.MfaApiImpl
+import io.github.jan.supabase.auth.otp.OtpApi
+import io.github.jan.supabase.auth.passwords.PasswordsApi
 import io.github.jan.supabase.auth.providers.AuthProvider
 import io.github.jan.supabase.auth.providers.ExternalAuthConfigDefaults
-import io.github.jan.supabase.auth.providers.IDTokenProvider
 import io.github.jan.supabase.auth.providers.OAuthProvider
-import io.github.jan.supabase.auth.providers.builtin.IDToken
-import io.github.jan.supabase.auth.providers.builtin.OTP
-import io.github.jan.supabase.auth.providers.builtin.SSO
+import io.github.jan.supabase.auth.sso.SsoApi
 import io.github.jan.supabase.auth.status.RefreshFailureCause
 import io.github.jan.supabase.auth.status.SessionSource
 import io.github.jan.supabase.auth.status.SessionStatus
@@ -59,7 +45,6 @@ import io.github.jan.supabase.supabaseJson
 import io.ktor.client.request.parameter
 import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsText
-import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.encodeURLParameter
 import kotlinx.coroutines.CoroutineScope
@@ -77,23 +62,16 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.io.bytestring.ByteString
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonObjectBuilder
 import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.encodeToJsonElement
-import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import kotlin.time.Clock
-import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 
 private const val SESSION_REFRESH_THRESHOLD = 0.8
-private val JWKS_TTL = 10.minutes
 @Suppress("MagicNumber") // see #631
 private val SIGN_OUT_IGNORE_CODES = listOf(401, 403, 404)
 @Suppress("MagicNumber") // see #1260
@@ -122,6 +100,11 @@ internal class AuthImpl(
     internal val userApi = if(config.requireValidSession) supabaseClient.authenticatedSupabaseApi(this) else publicApi
     override val admin: AdminApi = AdminApiImpl(publicApi)
     override val mfa: MfaApi = MfaApiImpl(userApi.resolve("factors"), this)
+    override val otp: OtpApi = io.github.jan.supabase.auth.otp.OtpApiImpl(this)
+    override val identities: IdentitiesApi = io.github.jan.supabase.auth.identities.IdentitiesApiImpl(this)
+    override val passwords: PasswordsApi = io.github.jan.supabase.auth.passwords.PasswordsApiImpl(this)
+    override val sso: SsoApi = io.github.jan.supabase.auth.sso.SsoApiImpl(this)
+    private val jwtValidator = io.github.jan.supabase.auth.jwt.JwtValidator(this)
     var sessionJob: Job? = null
     var refreshInformation: SessionRefreshInformation? = null
     override val isAutoRefreshRunning: Boolean
@@ -197,84 +180,6 @@ internal class AuthImpl(
         importSession(it, source = SessionSource.SignUp(provider))
     }, redirectUrl, config)
 
-    override suspend fun linkIdentity(
-        provider: OAuthProvider,
-        redirectUrl: String?,
-        config: ExternalAuthConfigDefaults.() -> Unit
-    ): String? {
-        val automaticallyOpen = ExternalAuthConfigDefaults().apply(config).automaticallyOpenUrl
-        val fetchUrl: suspend (String?) -> String = { redirectTo: String? ->
-            val url = getOAuthUrl(provider, redirectTo, "user/identities/authorize", config)
-            val response = userApi.rawRequest(url) {
-                method = HttpMethod.Get
-                parameter("skip_http_redirect", true)
-            }
-            response.safeBody<JsonObject>()["url"]?.jsonPrimitive?.contentOrNull ?: error("No URL found in response")
-        }
-        if(!automaticallyOpen) {
-            return fetchUrl(redirectUrl ?: "")
-        }
-        startExternalAuth(
-            redirectUrl = redirectUrl,
-            getUrl = {
-                fetchUrl(it)
-            },
-            onSessionSuccess = {
-                importSession(it, source = SessionSource.UserIdentitiesChanged(it))
-            }
-        )
-        return null
-    }
-
-    override suspend fun linkIdentityWithIdToken(
-        provider: IDTokenProvider,
-        idToken: String,
-        config: (IDToken.Config) -> Unit
-    ) {
-        val body = IDToken.Config(idToken = idToken, provider = provider, linkIdentity = true).apply(config)
-        val result = userApi.postJson("token?grant_type=id_token", body)
-        importSession(result.safeBody(), source = SessionSource.UserIdentitiesChanged(result.safeBody()))
-    }
-
-    override suspend fun unlinkIdentity(identityId: String, updateLocalUser: Boolean) {
-        userApi.delete("user/identities/$identityId")
-        if (updateLocalUser) {
-            val session = currentSessionOrNull() ?: return
-            val newUser = session.user?.copy(identities = session.user.identities?.filter { it.identityId != identityId })
-            val newSession = session.copy(user = newUser)
-            setSessionStatus(SessionStatus.Authenticated(newSession, SessionSource.UserIdentitiesChanged(session)))
-        }
-    }
-
-    override suspend fun retrieveSSOUrl(
-        redirectUrl: String?,
-        config: SSO.Config.() -> Unit
-    ): SSO.Result {
-        val createdConfig = SSO.Config().apply(config)
-
-        require((createdConfig.domain != null && createdConfig.domain!!.isNotBlank()) || (createdConfig.providerId != null && createdConfig.providerId!!.isNotBlank())) {
-            "Either domain or providerId must be set"
-        }
-
-        require(createdConfig.domain == null || createdConfig.providerId == null) {
-            "Either domain or providerId must be set, not both"
-        }
-
-        val codeChallenge: String? = preparePKCEIfEnabled()
-        return publicApi.postJson("sso", buildJsonObject {
-            redirectUrl?.let { put("redirect_to", it) }
-            createdConfig.captchaToken?.let(::putCaptchaToken)
-            codeChallenge?.let(::putCodeChallenge)
-            createdConfig.domain?.let {
-                put("domain", it)
-            }
-            createdConfig.providerId?.let {
-                put("provider_id", it)
-            }
-        })
-            .safeBody()
-    }
-
     override suspend fun updateUser(
         updateCurrentUser: Boolean,
         redirectUrl: String?,
@@ -299,49 +204,6 @@ internal class AuthImpl(
             setSessionStatus(SessionStatus.Authenticated(newSession, SessionSource.UserChanged(newSession)))
         }
         return userInfo
-    }
-
-    private suspend fun resend(type: String,  redirectUrl: String? = null, body: JsonObjectBuilder.() -> Unit) {
-        userApi.postJson("resend", buildJsonObject {
-            put("type", type)
-            putJsonObject(buildJsonObject(body))
-        }) {
-            redirectUrl?.let { url.parameters["redirect_to"] = it }
-        }
-    }
-
-    override suspend fun resendEmail(type: OtpType.Email, email: String, captchaToken: String?,  redirectUrl: String?) =
-        resend(type = type.type, redirectUrl = redirectUrl) {
-            put("email", email)
-            captchaToken?.let(::putCaptchaToken)
-        }
-
-    override suspend fun resendPhone(
-        type: OtpType.Phone,
-        phone: String,
-        captchaToken: String?
-    ) = resend(type.type) {
-        put("phone", phone)
-        captchaToken?.let(::putCaptchaToken)
-    }
-
-    override suspend fun resetPasswordForEmail(
-        email: String,
-        redirectUrl: String?,
-        captchaToken: String?
-    ) {
-        require(email.isNotBlank()) {
-            "Email must not be blank"
-        }
-        val codeChallenge = preparePKCEIfEnabled()
-        val body = buildJsonObject {
-            put("email", email)
-            captchaToken?.let(::putCaptchaToken)
-            codeChallenge?.let(::putCodeChallenge)
-        }.toString()
-        publicApi.postJson("recover", body) {
-            redirectUrl?.let { url.parameters.append("redirect_to", it) }
-        }
     }
 
     override suspend fun reauthenticate() {
@@ -369,116 +231,8 @@ internal class AuthImpl(
         logger.d { "Successfully logged out" }
     }
 
-    private suspend fun verify(
-        type: String,
-        token: String?,
-        captchaToken: String?,
-        additionalData: JsonObjectBuilder.() -> Unit
-    ): OtpVerifyResult {
-        val body = buildJsonObject {
-            put("type", type)
-            token?.let { put("token", it) }
-            captchaToken?.let(::putCaptchaToken)
-            additionalData()
-        }
-        val response = publicApi.postJson("verify", body)
-        val session = supabaseClient.bodyOrNull<UserSession>(response)
-        if(session == null) {
-            logger.d { "Received `verifyOtp` response without session: ${response.bodyAsText()}. This may occur if changing the email with 'Secure email change' enabled" }
-            return OtpVerifyResult.VerifiedNoSession
-        }
-        importSession(session, source = SessionSource.SignIn(OTP))
-        return OtpVerifyResult.Authenticated(session)
-    }
-
-    override suspend fun verifyEmailOtp(
-        type: OtpType.Email,
-        email: String,
-        token: String,
-        captchaToken: String?
-    ) = verify(type.type, token, captchaToken) {
-        put("email", email)
-    }
-
-    override suspend fun verifyEmailOtp(
-        type: OtpType.Email,
-        tokenHash: String,
-        captchaToken: String?
-    ) = verify(type.type, null, captchaToken) {
-        put("token_hash", tokenHash)
-    }
-
-    override suspend fun verifyPhoneOtp(
-        type: OtpType.Phone,
-        phone: String,
-        token: String,
-        captchaToken: String?
-    )  {
-        verify(type.type, token, captchaToken) {
-            put("phone", phone)
-        }
-    }
-
     override suspend fun getClaims(jwt: String?, options: ClaimsRequestBuilder.() -> Unit): ClaimsResponse {
-        val token = jwt ?: currentAccessTokenOrNull() ?: error("No access token found")
-        val (claims, rawHeader, rawPayload) = JWTUtils.decodeJwt(token)
-        val options = ClaimsRequestBuilder().apply(options)
-
-        if(!options.allowExpired) {
-            val exp = claims.claims.exp
-            val now = Clock.System.now()
-            if(exp == null || exp < now) throw TokenExpiredException()
-        }
-
-        val signingKey = if(claims.header.alg == JwtHeader.Algorithm.HS256 || claims.header.kid == null) null else {
-            fetchJwk(claims.header.kid, options.jwks)
-        }
-
-        if(signingKey == null) {
-            retrieveUser(token)
-            return claims
-        } else {
-            val signedData = "$rawHeader.$rawPayload".encodeToByteArray()
-            val verified = when(val alg = claims.header.alg) {
-                JwtHeader.Algorithm.RS256 -> {
-                    val keyDecoder = CryptographyProvider.Default
-                        .get(RSA.PKCS1).publicKeyDecoder(SHA256)
-                    val derKey = rsaJwkToDer(signingKey)
-                    val key = keyDecoder.decodeFromByteString(RSA.PublicKey.Format.DER, ByteString(derKey))
-                    key.signatureVerifier().tryVerifySignature(signedData, claims.signature)
-                }
-                JwtHeader.Algorithm.ES256 -> {
-                    val keyDecoder = CryptographyProvider.Default
-                        .get(ECDSA).publicKeyDecoder(EC.Curve.P256)
-                    val derKey = ecJwkToDer(signingKey)
-                    val key = keyDecoder.decodeFromByteString(EC.PublicKey.Format.DER, ByteString(derKey))
-                    val derSignature = ecdsaRawToDer(claims.signature)
-                    key.signatureVerifier(SHA256, ECDSA.SignatureFormat.DER).tryVerifySignature(signedData, derSignature)
-                }
-                else -> error("Invalid alg claim $alg")
-            }
-            if(!verified) throw InvalidJwtException()
-            return claims
-        }
-    }
-
-    private suspend fun fetchJwk(kid: String, jwks: List<JWK>): JWK? {
-        jwks.find { it.kid == kid }?.let { return it } // try to fetch in the supplied jwks
-        val now = Clock.System.now()
-        config.jwkCache.get()?.let { entry -> // try to fetch from local cache
-            val jwk = entry.jwks.find { jwk -> jwk.kid == kid }
-            if(jwk != null && entry.cachedAt + JWKS_TTL > now) return jwk
-        }
-        val response = unauthenticatedApi.get(".well-known/jwks.json").safeBody<JsonObject>() // fetch from the api
-        val keysArray = response["keys"]?.jsonArray
-        if(!response.containsKey("keys") || keysArray?.isEmpty() ?: true) return null
-        val keys = keysArray.map { JWK(it.jsonObject) }
-        config.jwkCache.set(JwkCacheEntry(
-            keys,
-            now
-        ))
-        val key = keys.find { it.kid == kid }
-        return key
+        return jwtValidator.getClaims(jwt, options)
     }
 
     override suspend fun retrieveUser(jwt: String): UserInfo {
@@ -785,7 +539,7 @@ internal class AuthImpl(
     /**
      * Prepares PKCE if enabled and returns the code challenge.
      */
-    private fun preparePKCEIfEnabled(): String? {
+    internal fun preparePKCEIfEnabled(): String? {
         if (this.config.flowType != FlowType.PKCE) return null
         val codeVerifier = generateCodeVerifier()
         authScope.launch {
