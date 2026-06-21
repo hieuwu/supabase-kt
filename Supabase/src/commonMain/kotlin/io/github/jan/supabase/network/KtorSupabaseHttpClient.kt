@@ -24,9 +24,7 @@ import io.ktor.http.HeadersBuilder
 import io.ktor.http.encodedPath
 import io.ktor.serialization.kotlinx.json.json
 import kotlin.coroutines.cancellation.CancellationException
-import kotlin.time.Duration.Companion.milliseconds
-
-private const val HTTPS_PORT = 443
+import kotlin.time.TimeSource
 
 /**
  * A function that can be used to override the default request configuration
@@ -39,8 +37,8 @@ typealias HttpRequestOverride = HttpRequestBuilder.() -> Unit
 @OptIn(SupabaseInternal::class)
 class KtorSupabaseHttpClient @SupabaseInternal constructor(
     private val supabase: SupabaseClient
-): SupabaseHttpClient() {
-    
+) : SupabaseHttpClient() {
+
     val logger = supabase.logger.appendTag(" [Network]")
     private val supabaseKey = supabase.supabaseKey
     private val osInformation = supabase.config.osInformation
@@ -61,67 +59,98 @@ class KtorSupabaseHttpClient @SupabaseInternal constructor(
     }
 
     @SupabaseInternal
-    val httpClient =
-        if(engine != null) HttpClient(engine) { applyDefaultConfiguration(modifiers) }
-        else HttpClient { applyDefaultConfiguration(modifiers) }
+    val httpClient = if (engine != null) {
+        HttpClient(engine) { applyDefaultConfiguration(modifiers) }
+    } else {
+        HttpClient { applyDefaultConfiguration(modifiers) }
+    }
 
-    override suspend fun request(url: String, builder: HttpRequestBuilder.() -> Unit): HttpResponse {
-        val request = HttpRequestBuilder().apply {
-            url(url)
-            builder()
-        }
+    override suspend fun request(
+        url: String,
+        builder: HttpRequestBuilder.() -> Unit
+    ): HttpResponse {
+        val request = buildRequest(url, builder)
         val endPoint = request.url.encodedPath
+
         logger.d { "Starting ${request.method.value} request to endpoint $endPoint" }
-        val response = try {
-            httpClient.request(url, builder)
-        } catch(e: HttpRequestTimeoutException) {
-            logger.d(e) { "${request.method.value} request to endpoint $endPoint timed out after $requestTimeout" }
-            throw e
-        } catch(e: CancellationException) {
-            logger.d(e) { "${request.method.value} request to endpoint $endPoint was cancelled"}
-            throw e
-        } catch(e: Exception) {
-            logger.d(e) { "${request.method.value} request to endpoint $endPoint failed with exception ${e.message}" }
-            throw HttpRequestException(e.message ?: "", request)
+
+        return executeSafely(request, endPoint) {
+            httpClient.request(request)
         }
-        val responseTime = (response.responseTime.timestamp - response.requestTime.timestamp).milliseconds
-        logger.d { "${request.method.value} request to endpoint $endPoint successfully finished in $responseTime" }
-        return response
     }
 
     override suspend fun prepareRequest(
         url: String,
         builder: HttpRequestBuilder.() -> Unit
     ): HttpStatement {
-        val request = HttpRequestBuilder().apply {
-            url(url)
-            builder()
+        val request = buildRequest(url, builder)
+        return executeSafely(request) {
+            httpClient.prepareRequest(request)
         }
-        val response = try {
-            httpClient.prepareRequest(url, builder)
-        } catch(e: HttpRequestTimeoutException) {
-            logger.d(e) { "Request timed out after $requestTimeout on url $url" }
-            throw e
-        } catch(e: CancellationException) {
-            logger.d(e) { "Request was cancelled on url $url" }
-            throw e
-        } catch(e: Exception) {
-            logger.d(e) { "Request failed with ${e.message} on url $url" }
-            throw HttpRequestException(e.message ?: "", request)
-        }
-        return response
     }
 
     fun close() = httpClient.close()
 
+    private fun buildRequest(
+        url: String,
+        builder: HttpRequestBuilder.() -> Unit
+    ): HttpRequestBuilder = try {
+        HttpRequestBuilder().apply {
+            url(url)
+            builder()
+        }
+    } catch (e: Exception) {
+        logger.d(e) { "Failed to build request builder for url $url" }
+        throw e
+    }
+
+    /**
+     * Executes a request with consistent timeout/cancellation/error logging.
+     */
+    private suspend inline fun <T> executeSafely(
+        request: HttpRequestBuilder,
+        endPoint: String? = null,
+        crossinline block: suspend () -> T
+    ): T {
+        val startTime = TimeSource.Monotonic.markNow()
+        val endpointName = endPoint ?: request.url.encodedPath
+
+        return try {
+            block().also {
+                logger.d { "${request.method.value} request to endpoint $endpointName successfully finished in ${startTime.elapsedNow()}" }
+            }
+        } catch (e: Exception) {
+            val elapsed = startTime.elapsedNow()
+            when (e) {
+                is HttpRequestTimeoutException -> {
+                    logger.d(e) {
+                        "${request.method.value} request to endpoint $endpointName timed out after $requestTimeout (elapsed: $elapsed)"
+                    }
+                    throw e
+                }
+                is CancellationException -> {
+                    logger.d(e) {
+                        "${request.method.value} request to endpoint $endpointName was cancelled after $elapsed"
+                    }
+                    throw e
+                }
+                else -> {
+                    logger.d(e) {
+                        "${request.method.value} request to endpoint $endpointName failed with exception ${e.message} after $elapsed"
+                    }
+                    throw HttpRequestException(e.message ?: "", request, e)
+                }
+            }
+        }
+    }
+
     private fun HeadersBuilder.defaultHeaders() {
-        if(supabaseKey.isNotBlank()) {
+        if (supabaseKey.isNotBlank()) {
             append("apikey", supabaseKey)
         }
         append("X-Client-Info", "supabase-kt/${BuildConfig.PROJECT_VERSION}")
         osInformation?.let {
             append("X-Supabase-Client-Platform", it.name)
-
             it.version?.let { version ->
                 append("X-Supabase-Client-Platform-Version", version)
             }
@@ -130,10 +159,7 @@ class KtorSupabaseHttpClient @SupabaseInternal constructor(
 
     private fun HttpClientConfig<*>.applyDefaultConfiguration(modifiers: List<HttpClientConfig<*>.() -> Unit>) {
         install(DefaultRequest) {
-            headers {
-                defaultHeaders()
-            }
-            port = HTTPS_PORT
+            headers { defaultHeaders() }
         }
         install(ContentNegotiation) {
             json(supabaseJson)
@@ -141,7 +167,6 @@ class KtorSupabaseHttpClient @SupabaseInternal constructor(
         install(HttpTimeout) {
             requestTimeoutMillis = requestTimeout.inWholeMilliseconds
         }
-        modifiers.forEach { it.invoke(this) }
+        modifiers.forEach { it(this) }
     }
-
 }

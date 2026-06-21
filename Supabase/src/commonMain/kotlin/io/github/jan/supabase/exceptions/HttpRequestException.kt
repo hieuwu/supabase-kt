@@ -6,4 +6,8 @@ import kotlinx.io.IOException
 /**
  * An exception that is thrown when a request fails due to network issues
  */
-class HttpRequestException(message: String, request: HttpRequestBuilder): IOException("HTTP request to ${request.url.buildString()} (${request.method.value}) failed with message: $message")
+class HttpRequestException(
+    message: String,
+    request: HttpRequestBuilder,
+    cause: Throwable? = null
+): IOException("HTTP request to ${request.url.buildString()} (${request.method.value}) failed with message: $message", cause)
