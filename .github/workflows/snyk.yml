@@ -23,10 +23,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4.0.1
         with:
           cache-read-only: false
-      - name: Run Snyk monitor to analyze dependencies
-        uses: snyk/actions/gradle@master
+      - name: Run Snyk test and monitor
+        run: ./gradlew snyk-test snyk-monitor
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        with:
-          command: monitor
-          args: --all-projects
