@@ -23,6 +23,16 @@ plugins {
     alias(libs.plugins.kotlinx.plugin.serialization) apply false
     id(libs.plugins.maven.publish.get().pluginId) apply false
     id(libs.plugins.power.assert.get().pluginId) apply false
+    id("io.snyk.gradle.plugin.snykplugin") version "0.7.0"
+}
+
+snyk {
+    setApi(System.getenv("SNYK_TOKEN") ?: "") // Set as an environment variable
+    setSeverity("medium") // Set threshold to medium or high
+    setAutoDownload(true)
+    setAutoUpdate(true)
+    setArguments("--all-sub-projects")
+
 }
 
 allprojects {
