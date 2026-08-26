@@ -1,5 +1,61 @@
 # Changelog
 
+### 3.8.0 - August 26, 2026
+
+### Core
+
+* fix(sample): move "Forgot password?" button out of overlapping Box in… by @MohammedThalha2002 in https://github.com/supabase-community/supabase-kt/pull/1367
+* docs: fix broken star history chart by @OctoBored in https://github.com/supabase-community/supabase-kt/pull/1381
+
+### Postgrest
+
+* feat(postgrest): add dryRun(), maybeSingle() modifiers, notIn filter by @jan-tennert in https://github.com/supabase-community/supabase-kt/pull/1365
+
+### Auth
+* feat(auth): add support for OAuth consent flow by @jan-tennert in https://github.com/supabase-community/supabase-kt/pull/1235
+* Add tests for RestException and plugin-specific subtypes by @MohammedThalha2002 in https://github.com/supabase-community/supabase-kt/pull/1368
+* fix(auth): include the status code description as the fallback by @jan-tennert in https://github.com/supabase-community/supabase-kt/pull/1379
+* fix(auth): catch all throwables instead of exceptions for refresh and loading by @jan-tennert in https://github.com/supabase-community/supabase-kt/pull/1383
+
+### Realtime
+* feat(realtime): add system flow, `replicationReady` option by @jan-tennert in https://github.com/supabase-community/supabase-kt/pull/1366
+```kotlin
+val channel = supabase.realtime.channel("test") {
+    broadcast { 
+        replicationReady = true
+    }
+}
+channel.systemFlow().collect { 
+    println(it.status)
+}
+```
+* feat(realtime): add realtime filter builder by @jan-tennert in https://github.com/supabase-community/supabase-kt/pull/1380
+```kotlin
+channel.postgresChangeFlow<PostgresAction>("public") {
+    table = "myTable"
+    filter { 
+        lt("id", 20)
+        eq("name", "Tom")
+    }
+}
+```
+// supported by all realtime postgres methods including:
+```kotlin
+supabase.from("myTable").selectAsFlow(...) {
+    eq("id", 2)
+    lt("age", 58)
+}
+```
+* fix(realtime): catch exceptions when resolving access token by @jan-tennert in https://github.com/supabase-community/supabase-kt/pull/1386
+
+### Storage
+
+* feat(storage): add purge methods for buckets and single objects by @jan-tennert in https://github.com/supabase-community/supabase-kt/pull/1375
+```kotlin
+supabase.storage.purgeBucketCache("myBucket")
+supabase.storage["myBucket"].purgeCache("myFile.png")
+```
+
 ### 3.7.0 - July 20, 2026
 
 ### Core
