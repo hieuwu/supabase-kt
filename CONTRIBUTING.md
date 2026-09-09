@@ -36,3 +36,16 @@ And add the following to your dependencies:
 ```kotlin
 implementation("io.github.jan-tennert.supabase:[module]:customVersion")
 ```
+
+## Code analysis
+
+Besides [detekt](/detekt.yml), the project is analyzed by Sonar. To run the analysis locally, pass the
+project key and, when analyzing on SonarQube Cloud, the organization:
+
+```shell
+./gradlew -DLibrariesOnly=true sonar -Dsonar.projectKey="yourProjectKey" -Dsonar.organization="yourOrganization" -Dsonar.token="yourToken"
+```
+
+Add `-Dsonar.host.url="https://your.sonarqube.server"` to analyze on a self-hosted SonarQube Server
+instead of the SonarQube Cloud default. The task runs the tests, generates the coverage and detekt
+reports and uploads them, so there is no need to run those beforehand.

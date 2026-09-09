@@ -17,6 +17,8 @@ apollo-kotlin = "5.0.1"
 serialization = "1.11.0"
 #korlibs = "6.0.0"
 detekt = "1.23.8"
+sonarqube = "7.5.0.8588"
+kover = "0.9.9"
 moshi = "1.15.2"
 jackson = "2.22.1"
 browser = "1.10.0"
@@ -44,6 +46,8 @@ android-library = { id = "com.android.library", version.ref = "agp" }
 android-kotlin-multiplatform-library = { id = "com.android.kotlin.multiplatform.library", version.ref = "agp" }
 maven-publish = { id = "com.vanniktech.maven.publish", version.ref = "maven-publish" }
 detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
+sonarqube = { id = "org.sonarqube", version.ref = "sonarqube" }
+kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }
 
 compose-plugin = { id = "org.jetbrains.compose", version.ref = "compose" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
