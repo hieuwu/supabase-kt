@@ -75,11 +75,13 @@ configure(analyzedModules) {
 val coverageReports = analyzedModules.map { it.layout.buildDirectory.file("reports/kover/report.xml").get().asFile }
 
 tasks.register("koverXmlReportAll") {
+    group = "verification"
     description = "Generates the Kover XML coverage report of every published module."
     dependsOn(analyzedModules.map { "${it.path}:koverXmlReport" })
 }
 
 tasks.register("koverHtmlReportAll") {
+    group = "verification"
     description = "Generates the Kover HTML coverage report of every published module."
     dependsOn(analyzedModules.map { "${it.path}:koverHtmlReport" })
 }
