@@ -24,7 +24,7 @@ fun Project.applyDetektWithConfiguration(reportMerge: TaskProvider<ReportMergeTa
         jvmTarget = "1.8"
         reports {
             xml.required.set(true) // imported by Sonar (sonar.kotlin.detekt.reportPaths)
-            html.required.set(false)
+            html.required.set(true)
             txt.required.set(false)
             sarif.required.set(true)
             md.required.set(false)
