@@ -23,8 +23,8 @@ fun Project.applyDetektWithConfiguration(reportMerge: TaskProvider<ReportMergeTa
     tasks.withType<io.gitlab.arturbosch.detekt.Detekt>().configureEach {
         jvmTarget = "1.8"
         reports {
-            xml.required.set(false)
-            html.required.set(false)
+            xml.required.set(true) // imported by Sonar (sonar.kotlin.detekt.reportPaths)
+            html.required.set(true)
             txt.required.set(false)
             sarif.required.set(true)
             md.required.set(false)
