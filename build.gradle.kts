@@ -79,6 +79,11 @@ tasks.register("koverXmlReportAll") {
     dependsOn(analyzedModules.map { "${it.path}:koverXmlReport" })
 }
 
+tasks.register("koverHtmlReportAll") {
+    description = "Generates the Kover HTML coverage report of every published module."
+    dependsOn(analyzedModules.map { "${it.path}:koverHtmlReport" })
+}
+
 tasks.register("detektAll") {
     libraryModules(false) {
         this@register.dependsOn(tasks.withType<io.gitlab.arturbosch.detekt.Detekt>())
