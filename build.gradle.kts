@@ -87,6 +87,8 @@ tasks.register("koverHtmlReportAll") {
 }
 
 tasks.register("detektAll") {
+    group = "verification"
+    description = "Runs detekt on every analyzed module."
     libraryModules(false) {
         this@register.dependsOn(tasks.withType<io.gitlab.arturbosch.detekt.Detekt>())
     }
